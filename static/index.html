@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaudeWiki</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>ClaudeWiki</h1>
+        <p>Get Wikipedia-backed answers with Claude</p>
+    </header>
+
+    <div id="chat-area"></div>
+
+    <div id="samples">
+        <button class="sample-btn" onclick="askSample(this)">Who was Marie Curie?</button>
+        <button class="sample-btn" onclick="askSample(this)">What caused the French Revolution?</button>
+        <button class="sample-btn" onclick="askSample(this)">How does photosynthesis work?</button>
+    </div>
+
+    <form id="chat-form">
+        <input type="text" id="chat-input" placeholder="Ask a question..." autocomplete="off">
+        <button type="submit" id="send-btn">Send</button>
+    </form>
+
+    <script src="/app.js"></script>
+</body>
+</html>
