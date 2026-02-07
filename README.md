@@ -2,7 +2,7 @@
 
 AI-powered answers backed by Wikipedia, using Claude and the MediaWiki API.
 
-![Claude](https://img.shields.io/badge/Claude-Sonnet%204-orange)
+![Claude](https://img.shields.io/badge/Claude-Haiku%204.5-orange)
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -281,7 +281,6 @@ wikipedia-tool/
 ├── eval_suite.py                   # Evaluation suite (70 cases, 7 dimensions)
 ├── run_eval.py                     # Test runner for evaluation suite
 ├── demo.py                         # Demo mode (no API key required)
-├── system_prompt.txt               # System instructions for Claude
 ├── requirements.txt                # Python dependencies
 ├── .env                            # API key storage (create this yourself)
 ├── .env.example                    # Environment variables template
