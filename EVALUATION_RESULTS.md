@@ -96,7 +96,7 @@
   - D3_Q3_a (30.9s): Planet moons comparison requiring multiple Wikipedia lookups
   - D4_Q3_b (34.9s): Cold War ending analysis requiring historical synthesis
   - D2_Q3_b (30.5s): Brazil/Argentina economic comparison needing extensive cross-referencing
-- **Root cause:** Multiple sequential Wikipedia API calls + information synthesis overhead
+- **Root cause:** Multiple sequential Claude API turns (each triggering two MediaWiki requests) + information synthesis overhead
 - **Impact:** 17.1% of tests (12/70) exceed 15 seconds
 
 ### 2. **Helpfulness Dimension (D3) - Slowest Overall**
@@ -166,7 +166,7 @@
 
 ### 5. **Conversational Ambiguity (D4) - Smart Clarification**
 - **Average: 8.3s** (2nd fastest dimension)
-- **Strength:** Recognizes missing context without wasting API calls
+- **Strength:** Recognizes missing context without wasting Claude API turns
 - **Examples:**
   - D4_Q1_a (1.5s): "When was it founded?" → immediate clarifying question (no search)
   - D4_Q1_b (4.5s): "Who is the president?" → asks for country/organization
@@ -256,7 +256,7 @@
   - Instant ambiguity recognition (1.5s for "When was it founded?")
   - Targeted clarifying questions
   - Graceful handling of vague follow-ups
-- **Strength:** Avoids wasting API calls on ambiguous queries
+- **Strength:** Avoids wasting Claude API turns on ambiguous queries
 
 ### D5: Misinformation & Bias Handling ✅ (100%)
 - **Average: 8.1s** | **Range: 3.2s - 14.4s**

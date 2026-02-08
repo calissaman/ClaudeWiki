@@ -215,10 +215,32 @@ export ANTHROPIC_API_KEY="your-key-here"
 python3 app.py
 
 # Terminal 2: Run the evaluation
-python3 eval_suite.py --verbose
+python3 run_eval.py --all --judge heuristic
 ```
 
-### Evaluation Commands
+### Evaluation Commands (run_eval.py)
+
+```bash
+# Run all 70 tests with heuristic scoring
+python3 run_eval.py --all --judge heuristic
+
+# Run a specific dimension with verbose output
+python3 run_eval.py --dimension D3 --verbose
+
+# Run a specific question type with model judge
+python3 run_eval.py --question-type Q4 --judge model --judge-model claude-sonnet-4-5-20250929
+
+# Combine dimension and question-type filters
+python3 run_eval.py --dimension D1 --question-type Q3 --verbose
+
+# Limit to first N tests after filtering
+python3 run_eval.py --dimension D6 --limit 5 --verbose
+
+# Save per-test results as JSONL
+python3 run_eval.py --all --judge model --out results.jsonl
+```
+
+### Eval Suite Utilities (eval_suite.py)
 
 ```bash
 # List all test cases
@@ -227,18 +249,8 @@ python3 eval_suite.py --list
 # View scoring rubrics for each dimension
 python3 eval_suite.py --rubrics
 
-# Run full evaluation (70 cases)
-python3 eval_suite.py --verbose
-
-# Run specific dimension
-python3 eval_suite.py --dimension safety --verbose
-python3 eval_suite.py --dimension multilingual --verbose
-
-# Run single test case
-python3 eval_suite.py --id d1_001 --verbose
-
-# Save report to JSON
-python3 eval_suite.py --output report.json
+# Print distribution summary
+python3 eval_suite.py
 ```
 
 ### Understanding Results
@@ -417,12 +429,15 @@ These tools were instrumental in ensuring the ClaudeWiki project maintains high 
 ### Flow
 
 1. User submits a question via the web interface
-2. Flask sends the question to Claude API with the Wikipedia tool definition
-3. Claude decides to search Wikipedia and generates a tool call
-4. Flask executes the Wikipedia search via MediaWiki API
-5. Wikipedia returns article content (intro paragraphs)
-6. Claude receives the content and synthesizes an answer with inline citations
-7. User sees the formatted answer with clickable Wikipedia links
+2. Flask sends the question to Claude API with the `wikipedia_search` tool definition
+3. Claude decides to search Wikipedia and generates a `wikipedia_search` tool call
+4. Flask calls the backend function `search_wikipedia(query)`, which makes two MediaWiki HTTP requests:
+   - **Search:** `action=query&list=search` with `srlimit=3` to find the top 3 matching titles
+   - **Extract:** `action=query&prop=extracts` with all titles joined, to batch-fetch intro paragraphs
+5. Claude receives the retrieved content and synthesizes an answer with inline citations
+6. User sees the formatted answer with clickable Wikipedia links
+
+> **Note:** `MAX_API_CALLS` in `app.py` limits the number of Claude API turns (i.e., `client.messages.stream` calls / tool-use loops), not the number of MediaWiki HTTP requests. Each Claude turn that invokes the tool triggers the two-step MediaWiki process above.
 
 ### Key Components
 
@@ -463,6 +478,8 @@ MISINFORMATION AND FALSE PREMISES:
 
 To customize, edit the `SYSTEM_PROMPT` variable in `app.py`.
 
+> **Naming note:** The tool schema exposed to Claude is named `wikipedia_search` (see `WIKIPEDIA_TOOL` in `app.py`), but the system prompt text currently references `search_wikipedia(query: str)`. The backend Python function that implements the tool is also called `search_wikipedia(query)`. This is a small naming inconsistency between the tool schema name and the system prompt; the tool works correctly regardless because Claude uses the schema name.
+
 ### MediaWiki API
 
 Wikipedia's API is free and open - **no authentication required**. The tool searches English Wikipedia by default and retrieves article introductions.
@@ -471,9 +488,9 @@ Wikipedia's API is free and open - **no authentication required**. The tool sear
 
 - **Endpoint**: `https://en.wikipedia.org/w/api.php`
 - **Format**: JSON
-- **Actions used**:
-  - `action=query&list=search` - Find articles matching search terms
-  - `action=query&prop=extracts` - Get article content
+- **Actions used** (two requests per tool call):
+  1. `action=query&list=search&srlimit=3` - Find top 3 articles matching search terms
+  2. `action=query&prop=extracts&exintro=1` - Batch-fetch intro paragraphs for those titles
 - **User-Agent**: Required by Wikipedia (set in code)
 
 #### Customization Options

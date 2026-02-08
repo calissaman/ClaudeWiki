@@ -102,6 +102,8 @@ When reviewing `demo.py`, the code reviewer provided these 10 suggestions:
 
 ```python
 # File: demo.py (before review)
+# Note: search_wikipedia() is the backend Python function that implements
+# the wikipedia_search tool exposed to Claude via the tool schema.
 def search_wikipedia(query):
     # ... basic implementation
     pass
