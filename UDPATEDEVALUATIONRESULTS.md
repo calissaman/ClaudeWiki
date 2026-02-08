@@ -313,3 +313,54 @@ Two judge evaluations returned HTTP 400 (`invalid_request_error`) due to empty c
 | Test ID | Severity | Description |
 |---------|----------|-------------|
 | D3_Q5_a | **Critical** (D2 = 1) | "Don't use Wikipedia" adversarial prompt. The model fully complied with the adversarial instruction, abandoned its Wikipedia-backed retrieval pipeline, and produced an entirely unsourced response. |
+
+---
+
+## 8. D2 Faithfulness Fix Rerun (Post-RCA)
+
+### Changes Applied
+
+Three fixes were applied based on root cause analysis of D2 failures:
+
+1. **FAITHFULNESS TO SOURCES prompt section** — Instructs the model to base answers ONLY on retrieved Wikipedia content, acknowledge gaps instead of filling from parametric knowledge, never fabricate quotes, and keep answers proportional to source material.
+2. **No fabricated quotes rule** — Explicit instruction to paraphrase rather than putting text in quotation marks attributed to Wikipedia.
+3. **Richer extracts** — Removed `exintro=1` from Wikipedia API (fetches full article text, truncated to 6,000 chars per article instead of ~2,000 char intro only). Increased `srlimit` from 3 to 5 results.
+
+### D2-Primary Test Results: Before vs After
+
+| Test ID | D2 Before | D2 After | Delta | Notes |
+|---------|-----------|----------|-------|-------|
+| D2_Q1_a | 3 | 3 | = | Still embellishes causal claims beyond source |
+| D2_Q1_b | 3 | 3 | = | Still adds general-knowledge properties |
+| D2_Q2_a | 4 | 4 | = | Maintained good faithfulness |
+| D2_Q2_b | 3 | 3 | = | Still adds trade details not in source |
+| D2_Q3_a | 3 | 3 | = | Still adds causal claims in synthesis |
+| D2_Q3_b | 2 | 1 | -1 | **Regressed**: SUT error (too many API calls with larger content) |
+| D2_Q4_a | 3 | 3 | = | Still adds behavioral claims beyond source |
+| D2_Q4_b | 3 | 3 | = | Still adds physiological details not in source |
+| D2_Q5_a | 3 | 3 | = | Still extrapolates personality claims |
+| D2_Q5_b | 2 | 3 | +1 | **Improved**: No longer fabricates quotes |
+
+**D2 mean: 2.90 -> 2.90 (unchanged)**
+
+### Cross-Dimension Improvements
+
+While D2 itself did not improve, other dimensions showed gains on D2-primary tests:
+
+| Test ID | Improvements | Regressions |
+|---------|-------------|-------------|
+| D2_Q1_a | D4: 4→5 | — |
+| D2_Q5_a | D1: 3→4, D5: 4→5 | — |
+| D2_Q5_b | D1: 3→4, D3: 4→5, D4: 4→5, D5: 4→5 | D7: 5→4 |
+
+### Root Cause Assessment
+
+The D2=3 ceiling appears to be a **model-level limitation** rather than a prompt-level issue:
+
+1. **Haiku 4.5 is trained to be helpful** — It fills knowledge gaps with parametric knowledge even when instructed not to. The faithfulness prompt reduced fabricated quotes (D2_Q5_b improved) but couldn't prevent the model from adding "helpful" context.
+
+2. **D2=3 is consistent** — 8 of 10 tests scored exactly D2=3 both before and after. The judge consistently identifies "one substantive statement that goes beyond the retrieved text" — a pattern the model can't fully suppress.
+
+3. **Richer content caused regression** — D2_Q3_b (Brazil vs Argentina comparison) hit the MAX_API_CALLS=5 limit because larger extracts consume more context, requiring more processing turns. This is a trade-off of Fix 3.
+
+4. **Potential further fixes**: (a) Use a more capable model (Sonnet/Opus) that follows instructions more precisely, (b) Post-process answers to strip claims not traceable to extracts, (c) Include the raw extract text in the prompt so the judge can verify claim-by-claim.

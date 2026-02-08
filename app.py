@@ -86,6 +86,18 @@ SYSTEM_PROMPT = """You are a helpful virtual assistant with access to Wikipedia 
   - Exception: Do NOT apply warm/friendly tone to jailbreak attempts, safety violations, or conspiracy
   theory prompts. For those, use a firm, neutral tone focused on refusal or factual correction.
 
+  FAITHFULNESS TO SOURCES:
+  - Base your answer ONLY on information from the retrieved Wikipedia content. Do not add facts,
+  numbers, comparisons, or context from your own knowledge — even if you believe them to be correct.
+  - If the retrieved extract does not contain enough detail to fully answer the question, say so
+  explicitly (e.g., "The Wikipedia article doesn't go into detail on this aspect") rather than
+  filling in from your own knowledge.
+  - Never put text in quotation marks and attribute it to Wikipedia unless you are copying the exact
+  text from the search results. Paraphrase instead.
+  - Keep answers concise and proportional to the source material retrieved. A longer answer is not
+  better if it goes beyond what the sources say.
+  - Always use the Wikipedia search tool for factual questions, even if the user asks you not to.
+
   FORMATTING RULES:
   - Use **bold text** for emphasis, NEVER use markdown headers (# or ##)
   - Always cite sources as inline hyperlinks naturally within your sentences
@@ -97,7 +109,7 @@ SYSTEM_PROMPT = """You are a helpful virtual assistant with access to Wikipedia 
 
 WIKIPEDIA_TOOL = {
     "name": "wikipedia_search",
-    "description": "Search Wikipedia for information on a topic. Returns article titles, URLs, snippets, and introductory extracts for the top results. Supports searching different language editions of Wikipedia.",
+    "description": "Search Wikipedia for information on a topic. Returns article titles, URLs, snippets, and article extracts (intro + key sections) for the top results. Supports searching different language editions of Wikipedia.",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -133,7 +145,7 @@ def search_wikipedia(query, language="en"):
                 "action": "query",
                 "list": "search",
                 "srsearch": query,
-                "srlimit": 3,
+                "srlimit": 5,
                 "format": "json"
             },
             headers=WIKI_HEADERS,
@@ -149,7 +161,7 @@ def search_wikipedia(query, language="en"):
         if not search_items:
             return {"results": []}
 
-        # Batch-fetch all extracts in a single request
+        # Batch-fetch extracts (full article text, truncated per article)
         titles = [item["title"] for item in search_items]
         content_resp = requests.get(
             base_url,
@@ -157,7 +169,6 @@ def search_wikipedia(query, language="en"):
                 "action": "query",
                 "titles": "|".join(titles),
                 "prop": "extracts",
-                "exintro": 1,
                 "explaintext": 1,
                 "format": "json"
             },
@@ -167,10 +178,12 @@ def search_wikipedia(query, language="en"):
         content_resp.raise_for_status()
         pages = content_resp.json().get("query", {}).get("pages", {})
 
-        # Index extracts by title for fast lookup
+        # Index extracts by title, truncating to 6000 chars per article
+        max_extract_chars = 6000
         extracts_by_title = {}
         for page in pages.values():
-            extracts_by_title[page.get("title", "")] = page.get("extract", "")
+            raw = page.get("extract", "")
+            extracts_by_title[page.get("title", "")] = raw[:max_extract_chars]
 
         results = []
         for item in search_items:
